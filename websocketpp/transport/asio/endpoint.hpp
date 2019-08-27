@@ -690,10 +690,10 @@ public:
      * needed.
      */
     timer_ptr set_timer(long duration, timer_handler callback) {
-        timer_ptr new_timer = lib::make_shared<lib::asio::steady_timer>(
+        timer_ptr new_timer( new lib::asio::steady_timer(
             *m_io_service,
              lib::asio::milliseconds(duration)
-        );
+        ));
 
         new_timer->async_wait(
             lib::bind(
