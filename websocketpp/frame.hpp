@@ -765,8 +765,25 @@ inline void word_mask_exact(uint8_t* data, size_t length, const
 inline size_t word_mask_circ(uint8_t * input, uint8_t * output, size_t length,
     size_t prepared_key)
 {
-    size_t n = length / sizeof(size_t); // whole words
-    size_t l = length - (n * sizeof(size_t)); // remaining bytes
+    size_t n; // whole words
+    size_t l; // remaining bytes
+#ifdef __arm__
+    if (    (((uintptr_t)input) % sizeof(size_t) == 0)
+         && (((uintptr_t)output) % sizeof(size_t) == 0))
+    {
+       n = length / sizeof(size_t); // whole words
+       l = length - (n * sizeof(size_t)); // remaining bytes
+    }
+    else
+    {
+       // unaligned access not possible on ARM
+       n = 0;
+       l = length;
+    }
+#else
+    n = length / sizeof(size_t); // whole words
+    l = length - (n * sizeof(size_t)); // remaining bytes
+#endif
     size_t * input_word = reinterpret_cast<size_t *>(input);
     size_t * output_word = reinterpret_cast<size_t *>(output);
 
@@ -779,7 +796,7 @@ inline size_t word_mask_circ(uint8_t * input, uint8_t * output, size_t length,
     size_t start = length - l;
     uint8_t * byte_key = reinterpret_cast<uint8_t *>(&prepared_key);
     for (size_t i = 0; i < l; ++i) {
-        output[start+i] = input[start+i] ^ byte_key[i];
+        output[start+i] = input[start+i] ^ byte_key[i % sizeof(size_t)];
     }
 
     return circshift_prepared_key(prepared_key,l);
